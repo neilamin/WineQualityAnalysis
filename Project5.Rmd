@@ -1,0 +1,429 @@
+Trends in Redwine by Neil Amin
+========================================================
+
+This dataset has 1599 records. It contains data on different red wines. The data
+set has variables for fixed acidity, volatile acidity, citric acid, residual sug
+ar, chlorides, free sulfur dioxide, total sulfur dioxide, density, ph, 
+sulphates, and alcohol. The output is the quality of wine. My goal is to find 
+trends between traits of wines that lead to a higher or lower quality wine.
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+
+library(ggplot2)
+library(scales)
+library(dplyr)
+library(reshape2)
+library(gridExtra)
+library(lubridate)
+library(swirl)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+wineInfo <- read.csv("wineQualityReds.csv")
+```
+
+Here we can see basic information about the dataset. We get statistics about the
+dataset and all 11 variables. X is not a variable but actually is the index of 
+each record in the data. Quality is the output that we will be trying to find 
+trends about.
+
+# Univariate Plots Section
+```{r echo=FALSE, Univariate_Plots}
+str(wineInfo)
+names(wineInfo)
+summary(wineInfo)
+```
+
+```{r echo=FALSE}
+hist1 <- qplot(x = quality, data = wineInfo, bins=16, xlab = "Quality", 
+               ylab = "Count", main = "Histogram of Quality")
+
+hist2 <- qplot(x = fixed.acidity, data = wineInfo, bins=16, 
+               xlab = "Fixed Acidity", ylab = "Count",
+               main = "Histogram of Fixed Acidity")
+
+hist3 <- qplot(x = volatile.acidity, data = wineInfo, bins=12, 
+               xlab = "Volatile Acidity", ylab = "Count", 
+               main = "Histogram of Volatile Acidity")
+
+hist4 <- qplot(x = citric.acid, data = wineInfo, bins=20, xlab = "Citric Acid", 
+               ylab = "Count", main = "Histogram of Citric Acid")
+
+hist5 <- qplot(x = residual.sugar, data = wineInfo, bins=20, 
+               xlab = "Residual Sugar", ylab = "Count", 
+               main = "Histogram of Residual Sugar")
+
+hist6 <- qplot(x = chlorides, data = wineInfo, bins=20, xlab = "Chlorides", 
+               ylab = "Count", main = "Histogram of Chlorides")
+
+hist7 <- qplot(x = free.sulfur.dioxide, data = wineInfo, bins=15,
+               xlab = "Free Sulfur Dioxide", ylab = "Count", 
+               main = "Histogram of Free Sulfur Dioxide")
+
+hist8 <- qplot(x = total.sulfur.dioxide, data = wineInfo, bins=40, 
+               xlab = "Total Sulfur Dioxide", ylab = "Count", 
+               main = "Histogram of Total Sulfur Dioxide")
+
+hist9 <- qplot(x = density, data = wineInfo, bins=30, xlab = "Density", 
+               ylab = "Count", main = "Histogram of Density")
+
+hist10 <- qplot(x = pH, data = wineInfo, bins=30, xlab = "pH", 
+                ylab = "Count", main = "Histogram of pH")
+
+hist11<- qplot(x = sulphates, data = wineInfo, bins=30, xlab = "Sulfates", 
+               ylab = "Count", main = "Histogram of Sulphates")
+
+hist12<- qplot(x = alcohol, data = wineInfo, bins=30, xlab = "Alcohol", 
+               ylab = "Count", main = "Histogram of Alcohol")
+
+grid.arrange(hist1,hist2,hist3,hist4, ncol = 2)
+grid.arrange(hist5,hist6,hist7,hist8, ncol = 2)
+grid.arrange(hist9,hist10,hist11,hist12, ncol = 2)
+
+```
+
+These are historgrams for all 11 variables and the output (quality). All of the 
+graphs appear to have a somewhat normal distribution except for residual sugar, 
+chlorides, free sulfur dioxide, and total sulfur dioxide. If we limit the 
+x values then we won't have this problem.
+
+```{r, echo=FALSE}
+hist5 <- qplot(x = residual.sugar, data = wineInfo, bins=20, 
+               xlab = "Residual Sugar", ylab = "Count", 
+               main = "Limited Histogram of Residual Sugar") + xlim(0, 5)
+
+hist6 <- qplot(x = chlorides, data = wineInfo, bins=20, xlab = "Chlorides", 
+               ylab = "Count", main = "Limited Histogram of Chlorides") + 
+               xlim(0, .2)
+
+hist7 <- qplot(x = free.sulfur.dioxide, data = wineInfo, bins=15, 
+               xlab = "Free Sulfur Dioxide", ylab = "Count", 
+               main = "Limited Free Sulfur Dioxide") + xlim(0, 30)
+
+hist8 <- qplot(x = total.sulfur.dioxide, data = wineInfo, bins=10, 
+               xlab = "Total Sulfur Dioxide", ylab = "Count", 
+               main = "Limited Total Sulfur Dioxide") + xlim(0, 70)
+
+grid.arrange(hist5,hist6,hist7,hist8, ncol = 2)
+```
+
+If we alter the bin size and the x values that are included we can see more 
+normalized graph. This gets rid of the smaller, outlier values so that we can 
+see the main bulk of records.
+
+```{r, echo=FALSE}
+g <- ggplot(wineInfo, aes(quality))
+g + geom_bar()
+```
+
+With this graph, we can see the majority of the wine falls between quality 5 
+and 6. This lets gives us the indicator that anything above a 6 in quality is 
+better than average wine. We want to look for trends in what kinds of wine have 
+this better than average rating.
+
+# Univariate Analysis
+
+Since we are investigating what characteristics of the wine make a high quality 
+wine. we are going to focus more on the subset of the data with a higher 
+quality. We will also use the subset of low quality wine which is below a 
+quality rating of 3 in order to see if it follows opposite trends which would 
+indicate some correlations. Most of our data was normally distributes from the 
+beginning but it is important that we find the normal distribution of the 
+others by removing the outliers.
+
+# Bivariate Plots Section
+```{r echo=FALSE, Bivariate_Plots}
+
+box1 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=fixed.acidity)) + 
+        labs(title = "Fixed Acidity Box Plot") + xlab("Quality") + ylab("Fixed Acidity")
+
+box2 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=volatile.acidity)) + 
+        labs(title = "Volatile Acidity Box Plot") + xlab("Quality") + ylab("Volatile Acidity")
+
+box3 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=citric.acid)) + 
+        labs(title = "Citric Acid Box Plot") + xlab("Quality") + ylab("Citric Acid")
+
+box4 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=residual.sugar)) + 
+        labs(title = "Residual Sugar Box Plot") + xlab("Quality") + ylab("Residual Sugar")
+
+box5 <- ggplot(wineInfo)+ 
+        geom_boxplot(aes(x=factor(quality), y=chlorides)) + 
+        labs(title = "Chlorides Box Plot") + xlab("Quality") + ylab("Chlorides")
+
+box6 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=free.sulfur.dioxide)) + 
+        labs(title = "Sulfur Dioxide Box Plot") + xlab("Quality") + ylab("Sulfur Dioxide")
+
+box7 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=total.sulfur.dioxide)) + 
+        labs(title = "Total Sulfur Dioxide Box Plot") + xlab("Quality") + ylab("Total Sulfur Dioxide")
+
+box8 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=density)) + 
+        labs(title = "Density Box Plot") + xlab("Quality") + ylab("Density")
+
+box9 <- ggplot(wineInfo) + 
+        geom_boxplot(aes(x=factor(quality), y=pH)) + 
+        labs(title = "pH Box Plot") + xlab("Quality") + ylab("pH")
+
+box10 <- ggplot(wineInfo) + 
+         geom_boxplot(aes(x=factor(quality), y=sulphates)) + 
+         labs(title = "Sulphates Box Plot") + xlab("Quality") + ylab("Sulphates")
+
+box11 <- ggplot(wineInfo) + 
+         geom_boxplot(aes(x=factor(quality), y=alcohol))  + 
+         labs(title = "Alcohol Box Plot") + xlab("Quality") + ylab("Alcohol(%)")
+
+grid.arrange(box1,box2,box3,box4+ coord_trans(y = "log10"),ncol=2)
+cor.test(wineInfo$quality, wineInfo$fixed.acidity)
+cor.test(wineInfo$quality, wineInfo$volatile.acidity)
+cor.test(wineInfo$quality, wineInfo$citric.acid)
+cor.test(wineInfo$quality, wineInfo$residual.sugar)
+```
+
+The first box plot compares Fixed Acidity vs Quality. I wanted to see if there 
+was a trend between levels of fixed acidity and quality. From looking at these 
+plots it doesn't seem that there is much of a trend.
+
+The second box plot compares Volatile Acidity vs Quality. There appears to be a 
+trend that less volatile acidity tends to have better quality.
+
+The third box plot compares Citric Acid vs Quality. This plot trends the 
+opposite way of volatile acidity in that more citric acid tended to get better 
+ratings.
+
+The fourth plot compares residual sugar with quality. It appears that there is 
+not much trend between residual sugar and quality.
+
+```{r, echo=FALSE}
+grid.arrange(box5 + coord_trans(y = "log10"),box6,box7,box8,ncol=2)
+cor.test(wineInfo$quality, wineInfo$chlorides)
+cor.test(wineInfo$quality, wineInfo$free.sulfur.dioxide)
+cor.test(wineInfo$quality, wineInfo$total.sulfur.dioxide)
+cor.test(wineInfo$quality, wineInfo$density)
+```
+
+The first box plot here compares chlorides to quality. Here it seems that less 
+chlorides might translate to better quality. This is not 100% clear so more 
+investigation will be needed.
+
+The second box compares sulfur dioxide to quality. There doesn't appear to much 
+correlation here.
+
+The third box plot is total sulfur dioxide vs quality. There also doesn't
+appear to be much correlation here.
+
+The fourth box plot is density vs quality. It seems there might be a 
+correlation to less dense wine being higher quality but like chlorides there 
+needs to be more investigation.
+
+```{r, echo=FALSE}
+grid.arrange(box9,box10,box11, ncol=2)
+cor.test(wineInfo$quality, wineInfo$sulphates)
+cor.test(wineInfo$quality, wineInfo$pH)
+cor.test(wineInfo$quality, wineInfo$alcohol)
+```
+
+This first plot is pH vs quality. There doesn't appear to be much correlation.
+
+The second plot is sulphates vs quality. It appears that higher sulphates 
+translate to higher quality wine.
+
+The last plot is alcohol vs quality. There is a strong trend between higher 
+alcohol and higher quality.
+
+After conducting Pearson's correlation on all of the data it is clear that 
+alcohol, fixed acidity, citric acid, and sulphates all have positive 
+correlations with quality. This is in contrast to density, total sulfur dioxide, 
+free sulfur, chlorides, total sulfur,and volatile acidity which were negative.
+
+```{r, echo=FALSE}
+ggplot(aes(x = fixed.acidity, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = volatile.acidity, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = citric.acid, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = residual.sugar, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = chlorides, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = free.sulfur.dioxide, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = total.sulfur.dioxide, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = density, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = pH, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = sulphates, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x = alcohol, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')
+```
+
+These graphs show the linear regression line when the characteristics are 
+compared to quality. The lines that had the largest slopes were the ones that 
+also happened to have the largest positve correlations. 
+
+# Bivariate Analysis
+
+My first goal was to use the box plots to figure out what variables had a 
+strong amount of high quality wines. It seemed that a certain few 
+haracteristics (alcohol, fixed acidity, citric acid, and sulphates). I decided 
+to futhur investigate by checking the correlations. It seems the same 
+characteristics had high positive correlations. Next I plotted all of the 
+variables against quality and the ones with the highest slopping regression 
+lines were the same as previously. These few charactertisitcs are going to
+require more investigation by me.
+
+# Multivariate Plots Section
+
+```{r echo=FALSE, Multivariate_Plots}
+#bins for alcohol consentration 
+wineInfo$alc.bucket <- cut(wineInfo$alcohol, c(8,11,14))
+
+
+
+ggplot(aes(x=volatile.acidity, y= quality),
+       data = subset(wineInfo, !is.na(alc.bucket))) +
+  geom_point(aes(color = alc.bucket),
+            stat = 'summary', fun.y = mean) +
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x=citric.acid, y= quality),
+       data = subset(wineInfo, !is.na(alc.bucket))) +
+  geom_point(aes(color = alc.bucket),
+            stat = 'summary', fun.y = mean) +
+  geom_smooth(method = 'lm')
+
+ggplot(aes(x=sulphates, y= quality),
+       data = subset(wineInfo, !is.na(alc.bucket))) +
+  geom_point(aes(color = alc.bucket),
+            stat = 'summary', fun.y = mean) +
+  geom_smooth(method = 'lm') 
+
+```
+
+Because alcohol had the strongest correlation, I took my earlier graphs and 
+compared them again with alcohol as a 2nd variable. The dots are shaded 
+different based on the different levels of alcohol in each. It seems that this 
+graph definitely indicates that higher alcohol is definitely correlated with 
+higher quality.
+
+# Multivariate Analysis
+
+It is clear from the multivariate analysis that alcohol was the most important 
+factor in determining quality. The other three characteristics all seemed to 
+have a smaller porportional effect on the quality as well.
+
+# Final Plots and Summary
+
+### Plot One
+
+```{r echo=FALSE, Plot_One}
+g2 <- ggplot(wineInfo, aes(quality)) + 
+      labs(x="Quality", y="Count", title="Quality Count")
+g2 + geom_bar()
+```
+
+### Description One
+
+I used this graph because it gave me a good initial indication as to what
+would be considered good wine vs average wine. I noticed that most of the 
+wine feel into a rating of 5,or 6 which meant that anything about 6 could 
+be considered high quality. This bench mark was used for much of my analysis.
+
+
+### Plot Two
+
+```{r echo=FALSE, Plot_Two}
+box11
+```
+
+### Description Two
+
+I chose to include the box plot of alcohol and quality because I felt that it 
+was the first piece of information that caught my eye when trying to find 
+characteristics of high quality wine. The box plots for the higher quality 
+wines tended to fall higher in alcohol content.
+
+### Plot Three
+
+```{r echo=FALSE, Plot_Three}
+
+ggplot(aes(x = sulphates, y = quality), data = wineInfo) + 
+  geom_jitter(alpha = 1/5)+
+  geom_smooth(method = 'lm')+
+  labs(x="Sulphates(mg/l)", y="Quality", title="Quality vs Sulphates")
+```
+
+### Description Three
+
+I chose to add this graph because sulfates had the second highest positive 
+correlation with quality. This gave a look at where high alcohol and high 
+sulfate containing wine ranked in the quality spectrum.
+
+
+# Reflection
+
+I decided to investigate what characteristics of the wine make a high quality 
+wine. After figuring out what a strong rating was using a histogram for 
+quality, my first goal was to use the box plots to figure out what variables 
+had a strong amount of high quality wines. A certain few characteristics 
+(alcohol, fixed acidity, citric acid, and sulphates) stuck out from others 
+based on their plots. I then futhur investigated by checking the correlations 
+of the 11 variables vs quality. I was able to conclude that same 
+characteristics had high positive correlations. 
+
+Finally I plotted all of the variables against quality to confirm my findings 
+and once again the variables with the highest slopping regression lines were 
+the same as previously. While looking at these, alcohol in particular also had 
+the strongest trend so I focused in on that by adding alcohol level to all of 
+the points in the other 3 graphs. It became clear from the multivariate 
+analysis that alcohol was the most important factor in determining quality. 
+The other three characteristics all seemed to have a smaller porportional 
+effect on the quality as well.
+
+My biggest obstacle was removing outliers from the data so that I could 
+normalize it. Residual sugar, chlorides, free sulfur dioxide, and total 
+sulfur dioxide were the characteristics that needed to have outliers removed. 
+Another problem I encountered was being able to create box plots with an 
+x value that was continous. I was able to fix this using the group function.
+
+Going forward I think there needs to be an investigation to whether alcohol 
+is causing a random correlation or an actual causation to an increased quality 
+level. I think BAC of the person creating the quality rating should be 
+accounted for if they are making a judgement based on drinking the wine.
